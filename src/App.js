@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 import './assets/css/style.css';
 import { Nav, DropdownArea } from './components/shared';
 import Editor from './components/screens/Editor';
-import recursivelyAddIds from './utils/recursivelyAddIds';
+import { recursivelyAddIds } from './utils/recursivelyHandleIds';
 import readSingleFile from './utils/readSingleFile';
 import findNestedObjectByID from './utils/findNestedObjectByID';
 import SelectLanguages from './components/shared/SelectLanguages';
@@ -18,13 +18,17 @@ class App extends Component {
     };
 
     componentWillMount() {
-        const localData = localStorage.getItem('latest_i18n_gui_file');
-        if (localData) {
-            // this.setState({
-            //     data: JSON.parse(localData),
-            //     is_data_loaded: true,
-            //     is_languages_selected: true
-            // });
+        const localData = localStorage.getItem('i18n_gui_file_data');
+        const localSelectedLanguages = localStorage.getItem(
+            'i18n_gui_selected_languages'
+        );
+        if (localData && localSelectedLanguages) {
+            this.setState({
+                data: JSON.parse(localData),
+                selected_languages: JSON.parse(localSelectedLanguages),
+                is_data_loaded: true,
+                is_languages_selected: true
+            });
         }
     }
 
@@ -33,7 +37,7 @@ class App extends Component {
             // adding ids
             data = recursivelyAddIds(data);
 
-            this.setState({ is_data_loaded: true, data: data });
+            this.setState({ is_data_loaded: true, data });
         });
     };
 
@@ -49,11 +53,11 @@ class App extends Component {
 
             // update local data
             const local_data = JSON.parse(
-                localStorage.getItem('latest_i18n_gui_file')
+                localStorage.getItem('i18n_gui_file_data')
             );
             local_data[lang] = this.state.data[lang];
             localStorage.setItem(
-                'latest_i18n_gui_file',
+                'i18n_gui_file_data',
                 JSON.stringify(local_data)
             );
         }
@@ -90,17 +94,34 @@ class App extends Component {
             this.state.selected_languages.forEach(lang => {
                 duplicated_data[lang] = JSON.parse(JSON.stringify(data));
             });
-            // save the data to localStorage and state
+            // save the data and selected languages to localStorage
             localStorage.setItem(
-                'latest_i18n_gui_file',
+                'i18n_gui_file_data',
                 JSON.stringify(duplicated_data)
             );
-            this.setState({ data: duplicated_data });
+            localStorage.setItem(
+                'i18n_gui_selected_languages',
+                JSON.stringify(this.state.selected_languages)
+            );
 
             this.setState({
+                data: duplicated_data,
                 is_languages_selected: true
             });
         }
+    }
+
+    startOver() {
+        // wipe everything
+        localStorage.removeItem('i18n_gui_file_data');
+        localStorage.removeItem('i18n_gui_selected_languages');
+        this.setState({
+            data: null,
+            is_data_loaded: false,
+            is_languages_selected: false,
+            is_download_btn_shown: false,
+            selected_languages: []
+        });
     }
 
     render() {
@@ -153,6 +174,7 @@ class App extends Component {
                         is_download_btn_shown={this.state.is_download_btn_shown}
                         languages={[...this.state.selected_languages]}
                         updateItem={this.updateItem.bind(this)}
+                        startOver={this.startOver.bind(this)}
                     />
                 )}
             </div>
